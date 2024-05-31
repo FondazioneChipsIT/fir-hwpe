@@ -171,6 +171,9 @@ module fir_ctrl
       // Hint: you can also take inspiration from tap_buffer_flags_i usage in FSM_TAP_BUFFER phase.
 
       // Placeholder for your code
+        if(streamer_flags_i.y_sink_flags.done) begin
+          state_d = FSM_IDLE;
+        end
 
       end
     endcase
