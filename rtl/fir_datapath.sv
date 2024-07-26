@@ -148,58 +148,53 @@ module fir_datapath
   //   end
   // Here we explicitly define a number of levels depending on NB_TAPS and propagate
   // addition through all layers of this binary tree.
-  generate
-    localparam int unsigned NB_LEVELS = $clog2(NB_TAPS);
-    // place the pipe stage roughly at 1/2 of the tree
-    localparam int unsigned PIPE_STAGE_LEVEL = NB_LEVELS/2;
+  localparam int unsigned NB_LEVELS = $clog2(NB_TAPS);
+  // place the pipe stage roughly at 1/2 of the tree
+  localparam int unsigned PIPE_STAGE_LEVEL = NB_LEVELS/2;
 
-    logic signed [NB_LEVELS-1:0][2**NB_LEVELS-1:0][DATA_WIDTH*2+$clog2(NB_TAPS)-1:0] y_level;
-    // upper layer of adder tree
-    begin
-      localparam int unsigned ii = NB_LEVELS-1;
-      localparam int unsigned NB_ADDERS = NB_TAPS/2 + NB_TAPS%2;
-      for(genvar jj=0; jj<NB_TAPS/2; jj++) begin
-        assign y_level[ii][jj] = signed'(prod_d[2*jj]) + signed'(prod_d[2*jj+1]) + 64'sh0;
-      end
-      if(NB_ADDERS != NB_TAPS/2) begin
-        assign y_level[ii][NB_ADDERS-1] = signed'(prod_d[2*(NB_ADDERS-1)]);
-      end
-      // tie extra y_level (not really part of the tree)
-      for(genvar jj=NB_ADDERS; jj<2**NB_LEVELS; jj++) begin
-        assign y_level[ii][jj] = '0;
-      end
+  logic signed [NB_LEVELS-1:0][2**NB_LEVELS-1:0][DATA_WIDTH*2+$clog2(NB_TAPS)-1:0] y_level;
+  // upper layer of adder tree
+  localparam int unsigned NB_ADDERS = NB_TAPS/2 + NB_TAPS%2;
+  for(genvar jj=0; jj<NB_TAPS/2; jj++) begin
+    assign y_level[NB_LEVELS-1][jj] = signed'(prod_d[2*jj]) + signed'(prod_d[2*jj+1]) + 64'sh0;
+  end
+  if(NB_ADDERS != NB_TAPS/2) begin
+    assign y_level[NB_LEVELS-1][NB_ADDERS-1] = signed'(prod_d[2*(NB_ADDERS-1)]);
+  end
+  // tie extra y_level (not really part of the tree)
+  for(genvar jj=NB_ADDERS; jj<2**NB_LEVELS; jj++) begin
+    assign y_level[NB_LEVELS-1][jj] = '0;
+  end
+  // middle layers of adder tree
+  for(genvar ii_rev=1; ii_rev<NB_LEVELS; ii_rev++) begin
+    localparam int unsigned ii = NB_LEVELS-ii_rev-1;
+    localparam int unsigned NB_ADDERS = 2**ii;
+    logic signed [2**NB_LEVELS-1:0][DATA_WIDTH*2+$clog2(NB_TAPS)-1:0] y_level_d;
+    for(genvar jj=0; jj<NB_ADDERS; jj++) begin
+      assign y_level_d[jj] = y_level[ii+1][2*jj] + y_level[ii+1][2*jj+1] + 64'sh0;
     end
-    // middle layers of adder tree
-    for(genvar ii_rev=1; ii_rev<NB_LEVELS; ii_rev++) begin
-      localparam int unsigned ii = NB_LEVELS-ii_rev-1;
-      localparam int unsigned NB_ADDERS = 2**ii;
-      logic signed [2**NB_LEVELS-1:0][DATA_WIDTH*2+$clog2(NB_TAPS)-1:0] y_level_d;
-      for(genvar jj=0; jj<NB_ADDERS; jj++) begin
-        assign y_level_d[jj] = y_level[ii+1][2*jj] + y_level[ii+1][2*jj+1] + 64'sh0;
-      end
-      // tie extra y_level (not really part of the tree)
-      for(genvar jj=NB_ADDERS; jj<2**NB_LEVELS; jj++) begin
-        assign y_level_d[jj] = '0;
-      end
-      if(ii == PIPE_STAGE_LEVEL) begin
-        always_ff @(posedge clk_i or negedge rst_ni)
-        begin
-          if(~rst_ni) begin
-            y_level[ii] <= '0;
-          end
-          else if(clear_i) begin
-            y_level[ii] <= '0;
-          end
-          else if(y_valid_d & y_ready) begin
-            y_level[ii] <= y_level_d;
-          end
+    // tie extra y_level (not really part of the tree)
+    for(genvar jj=NB_ADDERS; jj<2**NB_LEVELS; jj++) begin
+      assign y_level_d[jj] = '0;
+    end
+    if(ii == PIPE_STAGE_LEVEL) begin
+      always_ff @(posedge clk_i or negedge rst_ni)
+      begin
+        if(~rst_ni) begin
+          y_level[ii] <= '0;
+        end
+        else if(clear_i) begin
+          y_level[ii] <= '0;
+        end
+        else if(y_valid_d & y_ready) begin
+          y_level[ii] <= y_level_d;
         end
       end
-      else begin
-        assign y_level[ii] = y_level_d;
-      end
     end
-  endgenerate
+    else begin
+      assign y_level[ii] = y_level_d;
+    end
+  end
   // root of adder tree
   assign y_nonshifted_q = 64'sh0 + y_level[0][0];
 
