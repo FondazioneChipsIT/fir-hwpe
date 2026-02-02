@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-/* 
+/*
  * Authors:  Francesco Conti <fconti@iis.ee.ethz.ch>
  */
 
@@ -32,17 +32,17 @@ int main() {
   volatile int errors = 0;
   int gold_sum = 0, check_sum = 0;
   int i,j;
-  
+
   int offload_id_tmp, offload_id;
 
-  // acquire job 
+  // acquire job
   while((offload_id_tmp = fir_acquire_job()) < 0);
-  
+
   // job-dependent registers
   fir_x_addr_set((unsigned int) x_stim);
   fir_h_addr_set((unsigned int) h_stim);
   fir_y_addr_set((unsigned int) y_actual);
-  //------------------------------------------ < TASK-35 > -------------------------------------------
+  //------------------------------------------ < Task 29 > -------------------------------------------
   // Fix the shift value from 16 to 15
   fir_shift_length_set(16, 512); // right_shift, length
 

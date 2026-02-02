@@ -1,4 +1,4 @@
-/* 
+/*
  * fir_ctrl.sv
  * Francesco Conti <fconti@iis.ee.ethz.ch>
  *
@@ -41,7 +41,7 @@ module fir_ctrl
 
   // The controller is often the most complex piece of logic in a HWPE (even
   // a quite simple one). It is typically divided into several submodules:
-  //  - a "target" or "slave" interface to enable programming the HWPE. 
+  //  - a "target" or "slave" interface to enable programming the HWPE.
   //    We currently generally rely on memory-mapped control, but this could
   //    also be replaced with other mechanisms, such as ISA extensions.
   //    The slave hosts a physical register file to store the configuration
@@ -51,14 +51,14 @@ module fir_ctrl
   //    all of the information needed to control the HWPE.
   //    This config data structure is not strictly necessary, but it makes
   //    the controller much tidier, more readable and maintainable.
-  //  - a finite-state machine (FSM) that controls the overall state of the 
+  //  - a finite-state machine (FSM) that controls the overall state of the
   //    accelerator. This can be very simple (IDLE/RUN) or very complex,
   //    including hierarchical FSMs that include, for example, microcoded loops
   //    (through the `hwpe_ctrl_uloop` module). In general, the more control
   //    is distributed in the data-flow datapath modules, the less is centralized
   //    here: but we always need at least a minimal amount of central control.
   //    The FSM uses information from the config data structure, the `flags` incoming
-  //    from the datapath and streamer, and the internal state to drive the 
+  //    from the datapath and streamer, and the internal state to drive the
   //    `ctrl` signals outgoing towards the datapath and streamer.
 
   hwpe_ctrl_package::ctrl_slave_t   slave_ctrl;
@@ -66,7 +66,7 @@ module fir_ctrl
   hwpe_ctrl_package::ctrl_regfile_t reg_file;
 
   fir_config_t config_;
-  
+
   fir_fsm_state_t state_d, state_q;
 
   // Peripheral slave & register file
@@ -99,7 +99,7 @@ module fir_ctrl
 
   // Config <-> register file mappings
   // In this example, the mapping is relatively trivial, but it can become
-  // more interesting for example if we share the same physical register with 
+  // more interesting for example if we share the same physical register with
   // multiple fields, or if we need to perform some kind of translation.
   assign config_.x_addr = reg_file.hwpe_params[FIR_REG_X_ADDR];
   assign config_.h_addr = reg_file.hwpe_params[FIR_REG_H_ADDR];
@@ -165,9 +165,9 @@ module fir_ctrl
         end
       end
       FSM_COMPUTE: begin
-      //------------------------------------------ < TASK-34 > -------------------------------------------
-      // When the streamer is done writing the output(y) to the memory the state should be changed to the IDLE. 
-      // Hint: you can make use of the streamer_flags_i. Go through the fir_package.sv  for the correct signal. 
+      //------------------------------------------ < Task 28 > -------------------------------------------
+      // When the streamer is done writing the output(y) to the memory the state should be changed to the IDLE.
+      // Hint: you can make use of the streamer_flags_i. Go through the fir_package.sv for the correct signal.
       // Hint: you can also take inspiration from tap_buffer_flags_i usage in FSM_TAP_BUFFER phase.
 
       // Placeholder for your code
@@ -197,7 +197,7 @@ module fir_ctrl
   assign streamer_ctrl_o.x_serialize_ctrl.nb_contig_m1       = 0;
 
   // H stream
-  // We start the H streamer as soon as possible, but this will leave a bit of 
+  // We start the H streamer as soon as possible, but this will leave a bit of
   // latency to start fetching data from memory, and get the results back before
   // the tap buffer "really" works in the FSM_TAP_BUFFER state.
   assign streamer_ctrl_o.h_source_ctrl.req_start = (state_d == FSM_TAP_BUFFER && state_q == FSM_IDLE) ? 1'b1 : 1'b0;

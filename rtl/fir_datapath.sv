@@ -98,18 +98,18 @@ module fir_datapath
   // would be to propagate only the data and use a separate counter for handshakes, activating the
   // "last `valid`" after `NB_TAPS-1` handshakes.
   for (genvar ii=0; ii<NB_TAPS; ii++) begin : x_delay_gen
-    if(ii==0) begin 
-      always_comb begin 
+    if(ii==0) begin
+      always_comb begin
         // The first delayed x is actually not delayed at all
         x_delay_data_q[ii]  = x_data;
         // We consider the first delayed x valid if also the tap is valid
         x_delay_valid_q[ii] = x_valid & h_valid;
-      end 
-    end else begin 
+      end
+    end else begin
       always_ff @(posedge clk_i or negedge rst_ni)
       begin
-      
-      //----------------------------------------- <Task 22.1>  -----------------------------------------
+
+      //----------------------------------------- <Task 16.1>  -----------------------------------------
       // Implement the shift register logic for x_delay_data_q and x_delay_valid_q
       // Ensure to include the handshake signals for performing the shifting
       // Also, account for the reset (rst_ni) and clear (clear_i) signals appropriately
@@ -121,7 +121,7 @@ module fir_datapath
   end
 
 
-  //----------------------------------------- <Task 22.2>  -----------------------------------------
+  //----------------------------------------- <Task 16.2>  -----------------------------------------
   // Compute the elementwise product of h_data and x_delay_data_q in parallel.
   // Ensure to typecast the result to the signed datatype with the desired data width.
 
@@ -134,7 +134,7 @@ module fir_datapath
   // behavioral chain-of-additions code such as the following example, FPGA ones
   // sometimes do not.
   //   always_comb
-  //   begin 
+  //   begin
   //     y_nonshifted_d = 64'sh0 + signed'(prod_d[0]);
   //     for (int i=1; i<NB_TAPS; i++) begin
   //       y_nonshifted_d += 64'sh0 + signed'(prod_d[i]);
@@ -197,8 +197,8 @@ module fir_datapath
   // root of adder tree
   assign y_nonshifted_q = 64'sh0 + y_level[0][0];
 
-  // We introduce a pipeline stage here, governed by the y_valid_d/y_ready handshake, 
-  // because in synthesis (particularly on FPGA) the previous chain of additions 
+  // We introduce a pipeline stage here, governed by the y_valid_d/y_ready handshake,
+  // because in synthesis (particularly on FPGA) the previous chain of additions
   // constitutes a potentially very long combinational path.
   // The y_non_shifted_q can be pushed backwards by path retiming, shortening this
   // critical path at the cost of additional register resources.
@@ -227,13 +227,13 @@ module fir_datapath
     end
   end
 
-  assign y_valid_d = x_valid & h_valid; // consumer gets a valid output when the x and h are valid 
+  assign y_valid_d = x_valid & h_valid; // consumer gets a valid output when the x and h are valid
 
   // Right-shift y so that it is aligned to the original data width.
-  // Notice the usage of the `>>>` operator, which is a logical shift (i.e., it preservs sign)
+  // Notice the usage of the `>>>` operator, which is a logical shift (i.e., it preserves sign)
   // and of the `signed` cast operator.
   assign y_data  = signed'(y_nonshifted_q) >>> ctrl_i.right_shift;
-  
+
   // Unroll the HWPE-Stream source modports into `logic` bit vectors for convenience.
   // y in --> out
   assign y.data  = y_data;
@@ -253,7 +253,7 @@ module fir_datapath
   // Ready signals generally have to be propagated backwards through pipeline
   // stages combinationally unless we insert a FIFO buffer to isolate two computational
   // stages.
-  // However, in this example we have a more complicated scenario as y depends on 
+  // However, in this example we have a more complicated scenario as y depends on
   // both x and h (without FIFOs in between), and the ready signal must be propagated
   // accordingly:
   //
@@ -265,7 +265,7 @@ module fir_datapath
   //
   // We can distinguish a few cases:
   //  - both x and h are valid: in this case, y's ready is directly back-propagated to x_ready
-  //    and h_ready 
+  //    and h_ready
   //  - both x and h are invalid: in this case, the value of y_ready is not used to calculate
   //    x_ready and h_ready; we often assign y_ready to x_ready and h_ready to 1'b1
   //    signaling that the module is ready to accept new data (but 1'b0 would also work!)
@@ -281,11 +281,11 @@ module fir_datapath
   // of & and | would work as well.
   assign x_ready =  x_valid &  h_valid ? y_ready :
                    ~x_valid & ~h_valid ? 1'b1    :
-                    x_valid & ~h_valid ? 1'b0    : 
+                    x_valid & ~h_valid ? 1'b0    :
                                          1'b1;
   assign h_ready =  x_valid &  h_valid ? y_ready :
                    ~x_valid & ~h_valid ? 1'b1    :
-                    x_valid & ~h_valid ? 1'b1    : 
+                    x_valid & ~h_valid ? 1'b1    :
                                          1'b0;
   // Notice that inserting a FIFO between x and y would change this logic. For example,
   //
@@ -294,16 +294,16 @@ module fir_datapath
   //                            |---> y
   //                           /
   //   h ---------------------/
-  // 
+  //
   // would require to move the logic to the FIFO ready signals:
   //
   //   assign x_fifo.ready =  x_fifo.valid &  h_valid ? y_ready :
   //                         ~x_fifo.valid & ~h_valid ? 1'b1    :
-  //                          x_fifo.valid & ~h_valid ? 1'b0    : 
+  //                          x_fifo.valid & ~h_valid ? 1'b0    :
   //                                                    1'b1;
   //   assign h_ready =  x_valid &  h_valid ? y_ready :
   //                    ~x_valid & ~h_valid ? 1'b1    :
-  //                     x_valid & ~h_valid ? 1'b1    : 
+  //                     x_valid & ~h_valid ? 1'b1    :
   //                                          1'b0;
   //
   // The x_ready signal would then be directly generated by the FIFO (as `~full`).
