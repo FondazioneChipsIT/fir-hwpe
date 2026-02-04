@@ -60,7 +60,6 @@ module fir_datapath
   logic                                      h_handshake;
   // delayed inputs and valids
   logic signed [NB_TAPS-1:0][DATA_WIDTH-1:0] x_delay_data_q;
-  logic        [NB_TAPS-1:0]                 x_delay_valid_q;
   // FIR products
   logic signed [NB_TAPS-1:0][DATA_WIDTH*2-1:0]    prod_d;
   logic signed [DATA_WIDTH*2+$clog2(NB_TAPS)-1:0] y_nonshifted_d;
@@ -93,24 +92,18 @@ module fir_datapath
   // a single big `always_ff` block with a loop inside. This is mainly a matter of style, but it has
   // the advantage that it directly corresponds to an RTL description as opposed to a behavioral one.
   // So there will be less surprises when synthesizing this!
-  // Another important point is that we choose to propagate the `valid` along with the data through
-  // the shift register. We only need the actual `valid` for the last tap, so an alternative choice
-  // would be to propagate only the data and use a separate counter for handshakes, activating the
-  // "last `valid`" after `NB_TAPS-1` handshakes.
   for (genvar ii=0; ii<NB_TAPS; ii++) begin : x_delay_gen
     if(ii==0) begin
       always_comb begin
         // The first delayed x is actually not delayed at all
         x_delay_data_q[ii]  = x_data;
-        // We consider the first delayed x valid if also the tap is valid
-        x_delay_valid_q[ii] = x_valid & h_valid;
       end
     end else begin
       always_ff @(posedge clk_i or negedge rst_ni)
       begin
 
       //----------------------------------------- <Task 16.1>  -----------------------------------------
-      // Implement the shift register logic for x_delay_data_q and x_delay_valid_q
+      // Implement the shift register logic for x_delay_data_q
       // Ensure to include the handshake signals for performing the shifting
       // Also, account for the reset (rst_ni) and clear (clear_i) signals appropriately
 
