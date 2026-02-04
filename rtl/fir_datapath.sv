@@ -111,15 +111,12 @@ module fir_datapath
 
       if(~rst_ni) begin
         x_delay_data_q[ii]  <= '0;
-        x_delay_valid_q[ii] <= '0;
       end
       else if(clear_i) begin
         x_delay_data_q[ii]  <= '0;
-        x_delay_valid_q[ii] <= '0;
       end
       else if(x_handshake & h_handshake) begin
         x_delay_data_q[ii]  <= x_delay_data_q[ii-1];
-        x_delay_valid_q[ii] <= x_delay_valid_q[ii-1];
       end
 
       end
