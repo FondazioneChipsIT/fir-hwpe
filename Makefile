@@ -99,6 +99,7 @@ update-ips: $(BENDER)
 	--vlog-arg="$(compile_flag)" \
 	--vcom-arg="-pedanticerrors" \
 	-t rtl -t test               \
+	-t standalone_test           \
 	> sim/${compile_script}
 
 build-hw: hw-all
